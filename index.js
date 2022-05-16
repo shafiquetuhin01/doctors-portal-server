@@ -25,13 +25,35 @@ async function run(){
             const services = await cursor.toArray();
             res.send(services);
         });
-
+        app.get('/available', async(req,res)=>{
+          const date = req.query.date;
+          //get all services
+          const services = await servicesCollection.find().toArray();
+          //get the booking of that day
+          res.send(services);
+          const query = {date: date};
+          const bookings = await bookingCollection.find(query).toArray();
+          //foreach service, find that bookings for that service
+          services.forEach(service=>{
+            const serviceBookings = bookings.filter(b=>b.treatment === service.name);
+            const booked = serviceBookings.map(s=>s.slot);
+            const available = service.slots.filter(s=>!booked.includes(s));
+            service.available = available; 
+          })
+          res.send(services);
+        })
         app.post('/booking', async(req, res)=>{
           const booking = req.body;
-          const query = {treatment:booking.treatment,date:booking.date,patientEmail:booking.patientEmail}
+          const query = {treatment:booking.treatment,date:booking.date,patientEmail:booking.patientEmail};
+          const exists = await bookingCollection.findOne(query);
+          if(exists){
+            return res.send({success:false, booking:exists});
+          }
           const result = await bookingCollection.insertOne(booking);
-          res.send(result);
-        })
+          return res.send({success:true, result});
+        });
+
+        
     }
     finally{
 
@@ -41,8 +63,11 @@ run().catch(console.dir);
 
 app.get('/', (req, res) => {
   res.send('Hello from doctors portal!')
-})
+});
+app.get('/collection',(req,res)=>{
+  res.send('I am ready to continue my service');
+});
 
 app.listen(port, () => {
   console.log(`My port is listening as ${port}`)
-})
+});
