@@ -26,11 +26,7 @@ async function run() {
       res.send(services);
     });
 
-<<<<<<< HEAD
     app.put('/user/:email', async(req, res)=>{
-=======
-    app.put('/user/:email',(req, res)=>{
->>>>>>> f2b9190929910efcc0e42d2dadf0c556d5a36143
       const email = req.params.email;
       const user = req.body;
       const filter = {email: email};
