@@ -45,7 +45,20 @@ async function run() {
 
       // step 1:  get all services
       const services = await serviceCollection.find().toArray();
-
+      function varifyJWT(req, res, next){
+        const authHeader = req.headers.authorization;
+        if(!authHeader){
+          return res.status(401).send({message: 'Unauthorized access'});
+        }
+        const token = authHeader.split(' ')[1];
+        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function(err, decoded){
+          if(err){
+            return res.status(403).send({message: 'Forbidden access'})
+          }
+          req.decoded = decoded;
+          next();
+        });
+      }
       // step 2: get the booking of that day. output: [{}, {}, {}, {}, {}, {}]
       const query = {date: date};
       const bookings = await bookingCollection.find(query).toArray();
@@ -75,13 +88,18 @@ async function run() {
      * app.delete('/booking/:id) //
     */
 
-    app.get('/booking', async(req, res) =>{
+    app.get('/booking', varifyJWT, async(req, res) =>{
       const patient = req.query.patient;
-      const authorization = req.headers.authorization;
-      console.log('Auth header',authorization);
-      const query = {patient: patient};
-      const bookings = await bookingCollection.find(query).toArray();
-      res.send(bookings);
+      const decodedEmail = req.decoded.email;
+      if(patient === decodedEmail){
+        const query = {patient: patient};
+        const bookings = await bookingCollection.find(query).toArray();
+        res.send(bookings);
+      }
+      else{
+        return res.status(403).send({message:'Forbidden access'});
+      }
+      
     })
 
     app.post('/booking', async (req, res) => {
